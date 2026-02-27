@@ -1,0 +1,309 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Task, TaskCategory, TaskPriority } from "@/types/task"
+import { TaskColumn } from "@/components/task-column"
+import { Button } from "@/components/ui/button"
+import { 
+  Plus, 
+  LayoutDashboard, 
+  RotateCcw, 
+  Search, 
+  CheckCircle2,
+  TrendingUp,
+  Sparkles,
+} from "lucide-react"
+import { Input } from "@/components/ui/input"
+
+export default function DailyFlowDashboard() {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isMounted, setIsMounted] = useState(false)
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
+  const [isAiBreaking, setIsAiBreaking] = useState(false)
+
+  // Load tasks from API
+  useEffect(() => {
+    setIsMounted(true)
+    fetch('/api/tasks')
+      .then(res => res.json())
+      .then(data => setTasks(data))
+      .catch(e => console.error('Failed to load tasks', e))
+  }, [])
+
+  const addTask = (category: TaskCategory, title = "New Task", description = "") => {
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      title,
+      description,
+      priority: 'medium',
+      category,
+      completed: false,
+      createdAt: Date.now()
+    }
+    setTasks(prev => [...prev, newTask])
+    fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTask),
+    }).catch(e => console.error('Failed to save task', e))
+  }
+
+  const toggleTask = (id: string) => {
+    const task = tasks.find(t => t.id === id)
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t))
+    fetch(`/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: task ? !task.completed : true }),
+    }).catch(e => console.error('Failed to toggle task', e))
+  }
+
+  const deleteTask = (id: string) => {
+    setTasks(prev => prev.filter(t => t.id !== id))
+    fetch(`/api/tasks/${id}`, { method: 'DELETE' })
+      .catch(e => console.error('Failed to delete task', e))
+  }
+
+  const moveTask = (id: string, newCategory: TaskCategory) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, category: newCategory } : t))
+    fetch(`/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: newCategory }),
+    }).catch(e => console.error('Failed to move task', e))
+  }
+
+  const updatePriority = (id: string, priority: TaskPriority) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, priority } : t))
+    fetch(`/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priority }),
+    }).catch(e => console.error('Failed to update priority', e))
+  }
+
+  const updateTitle = (id: string, title: string) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, title } : t))
+    fetch(`/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    }).catch(e => console.error('Failed to update title', e))
+  }
+
+  const handleDragStart = (id: string) => {
+    setDraggedTaskId(id)
+  }
+
+  const handleDrop = (category: TaskCategory) => {
+    if (draggedTaskId) {
+      moveTask(draggedTaskId, category)
+      setDraggedTaskId(null)
+    }
+  }
+
+  const resetDailies = () => {
+    setTasks(prev => prev.map(t => t.category === 'dailies' ? { ...t, completed: false } : t))
+    fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reset-dailies' }),
+    }).catch(e => console.error('Failed to reset dailies', e))
+  }
+
+  const aiBreakdown = async () => {
+    setIsAiBreaking(true)
+    try {
+      const response = await fetch('/api/ai/breakdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        alert(error.error || 'Failed to break down tasks with AI')
+        return
+      }
+
+      const data = await response.json()
+      
+      // Create new tasks from AI breakdown
+      const newTasks = data.tasks.map((task: any) => ({
+        id: crypto.randomUUID(),
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        category: task.category,
+        completed: false,
+        createdAt: Date.now()
+      }))
+
+      // Add tasks to state and database
+      setTasks(prev => [...prev, ...newTasks])
+      fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTasks),
+      }).catch(e => console.error('Failed to save AI tasks', e))
+
+    } catch (error) {
+      console.error('AI breakdown failed:', error)
+      alert('Failed to break down tasks with AI. Please try again.')
+    } finally {
+      setIsAiBreaking(false)
+    }
+  }
+
+  const filteredTasks = tasks.filter(t => 
+    t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    t.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const stats = {
+    total: tasks.length,
+    completed: tasks.filter(t => t.completed).length,
+    today: tasks.filter(t => t.category === 'today').length,
+  }
+
+  if (!isMounted) return null
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-30 w-full bg-white/80 backdrop-blur-md border-b border-border px-6 py-4">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
+              <LayoutDashboard className="text-white h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-primary">DailyFlow</h1>
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Productivity Hub</p>
+            </div>
+          </div>
+
+          <div className="flex-1 max-w-md hidden md:block">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input 
+                placeholder="Find a task..." 
+                className="pl-10 bg-secondary/50 border-none focus-visible:ring-primary/20"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-4 mr-4 text-sm font-medium">
+              <div className="flex items-center gap-1 text-primary">
+                <CheckCircle2 size={16} />
+                <span>{stats.completed}/{stats.total} done</span>
+              </div>
+              <div className="flex items-center gap-1 text-accent">
+                <TrendingUp size={16} />
+                <span>{Math.round((stats.completed / (stats.total || 1)) * 100)}%</span>
+              </div>
+            </div>
+            <Button 
+              onClick={aiBreakdown} 
+              disabled={isAiBreaking}
+              variant="outline"
+              className="gap-2 border-primary/20 hover:bg-primary/10"
+            >
+              <Sparkles size={18} className={isAiBreaking ? "animate-pulse" : ""} />
+              {isAiBreaking ? "Breaking Down..." : "AI Breakdown"}
+            </Button>
+            <Button onClick={() => addTask('today')} className="gap-2 shadow-lg shadow-primary/20">
+              <Plus size={18} />
+              New Task
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 p-6 md:p-8 overflow-x-auto">
+        <div className="max-w-[1600px] mx-auto h-full min-h-[600px] flex gap-6 overflow-x-auto pb-4">
+          <TaskColumn 
+            title="Today" 
+            category="today"
+            tasks={filteredTasks.filter(t => t.category === 'today')}
+            onAddTask={addTask}
+            onToggle={toggleTask}
+            onDelete={deleteTask}
+            onMove={moveTask}
+            onUpdatePriority={updatePriority}
+            onUpdateTitle={updateTitle}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+          />
+          <TaskColumn 
+            title="Tomorrow" 
+            category="tomorrow"
+            tasks={filteredTasks.filter(t => t.category === 'tomorrow')}
+            onAddTask={addTask}
+            onToggle={toggleTask}
+            onDelete={deleteTask}
+            onMove={moveTask}
+            onUpdatePriority={updatePriority}
+            onUpdateTitle={updateTitle}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+          />
+          <TaskColumn 
+            title="This Week" 
+            category="week"
+            tasks={filteredTasks.filter(t => t.category === 'week')}
+            onAddTask={addTask}
+            onToggle={toggleTask}
+            onDelete={deleteTask}
+            onMove={moveTask}
+            onUpdatePriority={updatePriority}
+            onUpdateTitle={updateTitle}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+          />
+          <div className="flex flex-col gap-6 min-w-[300px] flex-1">
+             <div className="flex-1">
+              <TaskColumn 
+                title="Dailies" 
+                category="dailies"
+                tasks={filteredTasks.filter(t => t.category === 'dailies')}
+                onAddTask={addTask}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                onMove={moveTask}
+                onUpdatePriority={updatePriority}
+                onUpdateTitle={updateTitle}
+                onDragStart={handleDragStart}
+                onDrop={handleDrop}
+              />
+             </div>
+             <Button variant="outline" onClick={resetDailies} className="w-full gap-2 border-dashed border-2 py-6 text-muted-foreground hover:text-primary hover:border-primary">
+                <RotateCcw size={16} />
+                Reset Daily Routines
+             </Button>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer Mobile Stats */}
+      <div className="lg:hidden border-t bg-white p-3 flex justify-around text-xs font-bold text-muted-foreground uppercase tracking-widest">
+        <div className="flex flex-col items-center">
+          <span className="text-primary text-lg">{stats.today}</span>
+          <span>Today</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="text-accent text-lg">{stats.completed}</span>
+          <span>Done</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="text-foreground text-lg">{stats.total}</span>
+          <span>Total</span>
+        </div>
+      </div>
+    </div>
+  )
+}

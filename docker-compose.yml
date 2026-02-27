@@ -1,0 +1,36 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5432:3000"
+    volumes:
+      - todolist-data:/app/data
+    environment:
+      - NODE_ENV=production
+      - DB_PATH=/app/data/tasks.db
+      - OLLAMA_BASE_URL=http://ollama:11434
+    restart: unless-stopped
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
+
+volumes:
+  todolist-data:
+  ollama-data:
