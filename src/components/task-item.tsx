@@ -32,9 +32,9 @@ interface TaskItemProps {
 }
 
 const priorityColors: Record<TaskPriority, string> = {
-  low: "bg-blue-100 text-blue-700 hover:bg-blue-200",
-  medium: "bg-orange-100 text-orange-700 hover:bg-orange-200",
-  high: "bg-red-100 text-red-700 hover:bg-red-200",
+  low: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800",
+  medium: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800",
+  high: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800",
 }
 
 export function TaskItem({ 
@@ -169,10 +169,10 @@ export function TaskItem({
       onKeyDown={handleKeyDown}
       tabIndex={0}
       className={cn(
-        "group relative flex items-center gap-3 bg-white p-3 rounded-xl border border-border shadow-sm transition-all hover:shadow-md hover:border-primary/20 task-item",
+        "group relative flex items-center gap-3 bg-card p-3 rounded-xl border border-border shadow-sm transition-all hover:shadow-md hover:border-primary/20 task-item",
         task.completed && "opacity-60 grayscale-[0.5]",
-        isSelected && "ring-2 ring-blue-500 ring-inset bg-blue-50 border-blue-300",
-        isFocused && "ring-2 ring-blue-400 ring-inset bg-blue-50 border-blue-300"
+        isSelected && "ring-2 ring-primary ring-inset bg-primary/5 border-primary/30",
+        isFocused && "ring-2 ring-primary ring-inset bg-primary/5 border-primary/30"
       )}
     >
       <div className="flex items-center cursor-grab active:cursor-grabbing text-muted-foreground group-hover:text-primary transition-colors"

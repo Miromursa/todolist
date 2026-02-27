@@ -4,23 +4,21 @@ import { useState, useEffect } from "react"
 import { Task, TaskCategory, TaskPriority } from "@/types/task"
 import { TaskColumn } from "@/components/task-column"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { 
   Plus, 
-  LayoutDashboard, 
   RotateCcw, 
   Search, 
   CheckCircle2,
   TrendingUp,
-  Sparkles,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
-export default function DailyFlowDashboard() {
+export default function QuestlogDashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isMounted, setIsMounted] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
-  const [isAiBreaking, setIsAiBreaking] = useState(false)
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null)
   const [lastSelectedTaskId, setLastSelectedTaskId] = useState<string | null>(null)
@@ -271,48 +269,6 @@ export default function DailyFlowDashboard() {
     }
   }, [tasks])
 
-  const aiBreakdown = async () => {
-    setIsAiBreaking(true)
-    try {
-      const response = await fetch('/api/ai/breakdown', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        alert(error.error || 'Failed to break down tasks with AI')
-        return
-      }
-
-      const data = await response.json()
-      
-      // Create new tasks from AI breakdown
-      const newTasks = data.tasks.map((task: any) => ({
-        id: crypto.randomUUID(),
-        title: task.title,
-        description: task.description,
-        priority: task.priority,
-        category: task.category,
-        completed: false,
-        createdAt: Date.now()
-      }))
-
-      // Add tasks to state and database
-      setTasks(prev => [...prev, ...newTasks])
-      fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTasks),
-      }).catch(e => console.error('Failed to save AI tasks', e))
-
-    } catch (error) {
-      console.error('AI breakdown failed:', error)
-      alert('Failed to break down tasks with AI. Please try again.')
-    } finally {
-      setIsAiBreaking(false)
-    }
-  }
 
   const filteredTasks = tasks.filter(t => 
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -330,15 +286,12 @@ export default function DailyFlowDashboard() {
   return (
     <div className="min-h-screen bg-background flex flex-col" onKeyDown={handleKeyDown}>
       {/* Header */}
-      <header className="sticky top-0 z-30 w-full bg-white/80 backdrop-blur-md border-b border-border px-6 py-4">
+      <header className="sticky top-0 z-30 w-full bg-background/80 backdrop-blur-md border-b border-border px-6 py-4">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
-              <LayoutDashboard className="text-white h-6 w-6" />
-            </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-primary">DailyFlow</h1>
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Productivity Hub</p>
+              <h1 className="text-xl font-bold tracking-tight text-primary">Questlog</h1>
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Adventure Tracker</p>
             </div>
           </div>
 
@@ -355,25 +308,17 @@ export default function DailyFlowDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <div className="hidden lg:flex items-center gap-4 mr-4 text-sm font-medium">
               <div className="flex items-center gap-1 text-primary">
                 <CheckCircle2 size={16} />
                 <span>{stats.completed}/{stats.total} done</span>
               </div>
-              <div className="flex items-center gap-1 text-accent">
+              <div className="flex items-center gap-1 text-amber-700 dark:text-amber-600">
                 <TrendingUp size={16} />
                 <span>{Math.round((stats.completed / (stats.total || 1)) * 100)}%</span>
               </div>
             </div>
-            <Button 
-              onClick={aiBreakdown} 
-              disabled={isAiBreaking}
-              variant="outline"
-              className="gap-2 border-primary/20 hover:bg-primary/10"
-            >
-              <Sparkles size={18} className={isAiBreaking ? "animate-pulse" : ""} />
-              {isAiBreaking ? "Breaking Down..." : "AI Breakdown"}
-            </Button>
             <Button onClick={() => addTask('today')} className="gap-2 shadow-lg shadow-primary/20">
               <Plus size={18} />
               New Task
@@ -383,8 +328,8 @@ export default function DailyFlowDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-8 overflow-x-auto" onClick={handleBackgroundClick}>
-        <div className="max-w-[1600px] mx-auto h-full min-h-[600px] flex gap-6 overflow-x-auto pb-4">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-x-auto" onClick={handleBackgroundClick}>
+        <div className="max-w-[1600px] mx-auto h-full min-h-[600px] flex gap-4 sm:gap-6 overflow-x-auto pb-4">
           <TaskColumn 
             title="Today" 
             category="today"
@@ -439,7 +384,7 @@ export default function DailyFlowDashboard() {
             onTaskSelect={handleTaskSelect}
             onTaskFocus={handleTaskFocus}
           />
-          <div className="flex flex-col gap-6 min-w-[300px] flex-1">
+          <div className="flex flex-col gap-4 sm:gap-6 min-w-[280px] sm:min-w-[300px] flex-1">
              <div className="flex-1">
               <TaskColumn 
                 title="Dailies" 
@@ -469,7 +414,7 @@ export default function DailyFlowDashboard() {
       </main>
 
       {/* Footer Mobile Stats */}
-      <div className="lg:hidden border-t bg-white p-3 flex justify-around text-xs font-bold text-muted-foreground uppercase tracking-widest">
+      <div className="lg:hidden border-t bg-background p-3 flex justify-around text-xs font-bold text-muted-foreground uppercase tracking-widest">
         <div className="flex flex-col items-center">
           <span className="text-primary text-lg">{stats.today}</span>
           <span>Today</span>

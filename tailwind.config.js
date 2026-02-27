@@ -48,7 +48,8 @@ module.exports = {
       },
     },
     fontFamily: {
-      body: ["var(--font-body)", "sans-serif"],
+      body: ['var(--font-body)', 'sans-serif'],
+      handwritten: ['var(--font-handwritten)', 'cursive'],
     },
   },
   plugins: [require("tailwindcss-animate")],

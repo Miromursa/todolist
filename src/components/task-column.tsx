@@ -71,17 +71,17 @@ export function TaskColumn({
   return (
     <div 
       className={cn(
-        "flex flex-col h-full rounded-2xl p-4 min-w-[300px] flex-1 transition-colors duration-200",
+        "flex flex-col h-full rounded-2xl p-3 sm:p-4 min-w-[280px] sm:min-w-[300px] flex-1 transition-colors duration-200",
         isOver ? "bg-primary/10 ring-2 ring-primary ring-inset" : "bg-secondary/30"
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDropInternal}
     >
-      <div className="flex items-center justify-between mb-4 px-2">
+      <div className="flex items-center justify-between mb-3 sm:mb-4 px-2">
         <div className="flex items-center gap-2">
-          <h3 className="font-bold text-lg text-primary">{title}</h3>
-          <span className="text-xs font-semibold bg-white px-2 py-0.5 rounded-full shadow-sm text-muted-foreground border border-border">
+          <h3 className="font-bold text-base sm:text-lg text-primary">{title}</h3>
+          <span className="text-[10px] sm:text-xs font-semibold bg-card px-1.5 sm:px-2 py-0.5 rounded-full shadow-sm text-muted-foreground border border-border">
             {tasks.length}
           </span>
         </div>
@@ -89,13 +89,13 @@ export function TaskColumn({
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 text-primary hover:bg-primary/10"
+            className="h-7 w-7 sm:h-8 sm:w-8 text-primary hover:bg-primary/10"
             onClick={(e) => {
               e.stopPropagation()
               onAddTask(category)
             }}
           >
-            <Plus size={20} />
+            <Plus size={18} />
           </Button>
         </div>
       </div>

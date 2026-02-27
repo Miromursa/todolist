@@ -10,36 +10,7 @@ services:
     environment:
       - NODE_ENV=development
       - DB_PATH=/app/data/tasks.db
-      - VLLM_BASE_URL=http://vllm:8000
     restart: unless-stopped
-    depends_on:
-      - vllm
-
-  vllm:
-    image: vllm/vllm-openai:latest
-    ports:
-      - "8000:8000"
-    volumes:
-      - vllm-data:/root/.cache/huggingface
-    restart: unless-stopped
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    command: >
-      --model Qwen/Qwen3-Coder-30B
-      --gpu-memory-utilization 0.9
-      --max-model-len 8192
-      --port 8000
-      --host 0.0.0.0
-      --api-key token-secret
-    networks:
-      - default
 
 networks:
   default:
@@ -47,4 +18,3 @@ networks:
 
 volumes:
   todolist-data:
-  vllm-data:
