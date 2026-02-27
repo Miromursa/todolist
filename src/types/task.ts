@@ -1,4 +1,4 @@
-export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskPriority = 'A' | 'B' | 'C' | 'D';
 
 export type TaskCategory = 'today' | 'tomorrow' | 'week' | 'dailies';
 

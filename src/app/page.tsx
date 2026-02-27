@@ -37,7 +37,7 @@ export default function QuestlogDashboard() {
       id: crypto.randomUUID(),
       title,
       description,
-      priority: 'medium',
+      priority: 'B',
       category,
       completed: false,
       createdAt: Date.now()
@@ -133,7 +133,7 @@ export default function QuestlogDashboard() {
         const columnTasks = tasks
           .filter(t => t.category === currentTask.category)
           .sort((a, b) => {
-            const priorityOrder = { high: 0, medium: 1, low: 2 }
+            const priorityOrder = { A: 0, B: 1, C: 2, D: 3 }
             if (a.completed !== b.completed) return a.completed ? 1 : -1
             return priorityOrder[a.priority] - priorityOrder[b.priority]
           })
@@ -197,7 +197,7 @@ export default function QuestlogDashboard() {
       const currentColumnTasks = filteredTasks.filter(t => t.category === categories[0])
       const allColumnTasks = categories.map(cat => 
         filteredTasks.filter(t => t.category === cat).sort((a, b) => {
-          const priorityOrder = { high: 0, medium: 1, low: 2 }
+          const priorityOrder = { A: 0, B: 1, C: 2, D: 3 }
           if (a.completed !== b.completed) return a.completed ? 1 : -1
           return priorityOrder[a.priority] - priorityOrder[b.priority]
         })

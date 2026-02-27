@@ -21,7 +21,7 @@ function getDb(): Database.Database {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         description TEXT DEFAULT '',
-        priority TEXT NOT NULL DEFAULT 'medium',
+        priority TEXT NOT NULL DEFAULT 'B',
         category TEXT NOT NULL,
         completed INTEGER NOT NULL DEFAULT 0,
         createdAt INTEGER NOT NULL

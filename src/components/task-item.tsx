@@ -32,9 +32,17 @@ interface TaskItemProps {
 }
 
 const priorityColors: Record<TaskPriority, string> = {
-  low: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800",
-  medium: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800",
-  high: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800",
+  A: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800",
+  B: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800",
+  C: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800",
+  D: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800",
+}
+
+const priorityDescriptions: Record<TaskPriority, string> = {
+  A: "Main Quest - Urgent and important",
+  B: "Main Quest - Important but less urgent", 
+  C: "Sidequest - Projects, ideas, minor tasks",
+  D: "Sidequest - Unimportant projects or ideas"
 }
 
 export function TaskItem({ 
@@ -150,7 +158,7 @@ export function TaskItem({
 
   const cyclePriority = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const priorities: TaskPriority[] = ['low', 'medium', 'high']
+    const priorities: TaskPriority[] = ['A', 'B', 'C', 'D']
     const currentIndex = priorities.indexOf(task.priority)
     const nextPriority = priorities[(currentIndex + 1) % priorities.length]
     onUpdatePriority(task.id, nextPriority)
@@ -231,6 +239,7 @@ export function TaskItem({
         <Badge 
           onClick={cyclePriority}
           variant="outline" 
+          title={priorityDescriptions[task.priority]}
           className={cn(
             "text-[10px] uppercase font-bold px-1.5 py-0 cursor-pointer transition-colors", 
             priorityColors[task.priority]
@@ -246,14 +255,17 @@ export function TaskItem({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'high')}>
-              Priority: High
+            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'A')}>
+              Priority: A
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'medium')}>
-              Priority: Medium
+            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'B')}>
+              Priority: B
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'low')}>
-              Priority: Low
+            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'C')}>
+              Priority: C
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'D')}>
+              Priority: D
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onMove(task.id, 'today')}>
