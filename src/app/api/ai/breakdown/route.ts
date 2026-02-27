@@ -29,14 +29,14 @@ export async function POST(request: Request) {
     
     // Provide more specific error messages
     if (error instanceof Error) {
-      if (error.message.includes('connect to Ollama')) {
+      if (error.message.includes('connect to vLLM')) {
         return NextResponse.json({ 
-          error: 'Cannot connect to Ollama. Please make sure Ollama is running on localhost:11434' 
+          error: 'Cannot connect to vLLM. Please make sure vLLM is running on localhost:8000' 
         }, { status: 503 });
       }
       if (error.message.includes('No models available')) {
         return NextResponse.json({ 
-          error: 'No AI models available. Please pull a model in Ollama first (e.g., "ollama pull llama3.2")' 
+          error: 'No AI models available. Please make sure vLLM is running with the correct model' 
         }, { status: 503 });
       }
       if (error.message.includes('Failed to break down tasks')) {

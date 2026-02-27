@@ -1,104 +1,108 @@
-interface OllamaModel {
-  name: string;
-  size: number;
-  digest: string;
-  modified_at: string;
+interface VLLMModel {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
 }
 
-interface OllamaResponse {
+interface VLLMChatResponse {
+  id: string;
+  object: string;
+  created: number;
   model: string;
-  created_at: string;
-  response: string;
-  done: boolean;
-  total_duration?: number;
-  load_duration?: number;
-  prompt_eval_count?: number;
-  eval_count?: number;
-}
-
-interface OllamaGenerateRequest {
-  model: string;
-  prompt: string;
-  stream?: boolean;
-  options?: {
-    temperature?: number;
-    top_p?: number;
-    max_tokens?: number;
+  choices: Array<{
+    index: number;
+    message: {
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }>;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
   };
 }
 
-class OllamaService {
+interface VLLMChatRequest {
+  model: string;
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+  temperature?: number;
+  top_p?: number;
+  max_tokens?: number;
+  stream?: boolean;
+}
+
+class VLLMService {
   private baseUrl: string;
-  private preferredModels = ['qwen3', 'gemma3'];
+  private apiKey: string;
+  private modelName = 'Qwen/Qwen3-Coder-30B';
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+    this.baseUrl = baseUrl || process.env.VLLM_BASE_URL || 'http://localhost:8000';
+    this.apiKey = 'token-secret'; // Default API key from docker-compose
   }
 
-  async getAvailableModels(): Promise<OllamaModel[]> {
+  async getAvailableModels(): Promise<VLLMModel[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/tags`);
+      const response = await fetch(`${this.baseUrl}/v1/models`, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+      });
       if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.status}`);
+        throw new Error(`vLLM API error: ${response.status}`);
       }
       const data = await response.json();
-      return data.models || [];
+      return data.data || [];
     } catch (error) {
-      console.error('Failed to fetch Ollama models:', error);
-      throw new Error('Unable to connect to Ollama. Make sure Ollama is running.');
+      console.error('Failed to fetch vLLM models:', error);
+      throw new Error('Unable to connect to vLLM. Make sure vLLM is running.');
     }
   }
 
   async getBestModel(): Promise<string> {
-    const models = await this.getAvailableModels();
-    
-    // Find the best model based on our preferences
-    for (const preferred of this.preferredModels) {
-      const found = models.find(model => 
-        model.name.toLowerCase().includes(preferred.toLowerCase())
-      );
-      if (found) {
-        return found.name;
-      }
-    }
-    
-    // If no preferred model found, return the first available one
-    if (models.length > 0) {
-      return models[0].name;
-    }
-    
-    throw new Error('No models available. Please pull a model in Ollama first.');
+    // vLLM runs a specific model, so we return the configured model name
+    return this.modelName;
   }
 
   async generateResponse(prompt: string, model?: string): Promise<string> {
     const selectedModel = model || await this.getBestModel();
     
-    const request: OllamaGenerateRequest = {
+    const request: VLLMChatRequest = {
       model: selectedModel,
-      prompt,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+      top_p: 0.9,
+      max_tokens: 2000,
       stream: false,
-      options: {
-        temperature: 0.7,
-        top_p: 0.9,
-        max_tokens: 2000,
-      },
     };
 
     try {
-      const response = await fetch(`${this.baseUrl}/api/generate`, {
+      const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(request),
       });
 
       if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.status}`);
+        throw new Error(`vLLM API error: ${response.status}`);
       }
 
-      const data: OllamaResponse = await response.json();
-      return data.response;
+      const data: VLLMChatResponse = await response.json();
+      return data.choices[0]?.message?.content || '';
     } catch (error) {
       console.error('Failed to generate response:', error);
       throw new Error('Failed to generate AI response');
@@ -106,7 +110,7 @@ class OllamaService {
   }
 }
 
-export const aiService = new OllamaService();
+export const aiService = new VLLMService();
 
 export interface BreakdownTask {
   title: string;

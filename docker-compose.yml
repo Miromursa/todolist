@@ -4,26 +4,40 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5432:3000"
+      - "5432:5432"
     volumes:
       - todolist-data:/app/data
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - DB_PATH=/app/data/tasks.db
-      - OLLAMA_BASE_URL=http://ollama:11434
+      - VLLM_BASE_URL=http://vllm:8000
     restart: unless-stopped
     depends_on:
-      - ollama
+      - vllm
 
-  ollama:
-    image: ollama/ollama:latest
+  vllm:
+    image: vllm/vllm-openai:latest
     ports:
-      - "11434:11434"
+      - "8000:8000"
     volumes:
-      - ollama-data:/root/.ollama
+      - vllm-data:/root/.cache/huggingface
     restart: unless-stopped
     environment:
-      - OLLAMA_HOST=0.0.0.0
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN:-}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: >
+      --model Qwen/Qwen3-Coder-30B
+      --gpu-memory-utilization 0.9
+      --max-model-len 8192
+      --port 8000
+      --host 0.0.0.0
+      --api-key token-secret
     networks:
       - default
 
@@ -33,4 +47,4 @@ networks:
 
 volumes:
   todolist-data:
-  ollama-data:
+  vllm-data:

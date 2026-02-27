@@ -21,6 +21,9 @@ export default function DailyFlowDashboard() {
   const [isMounted, setIsMounted] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [isAiBreaking, setIsAiBreaking] = useState(false)
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null)
+  const [lastSelectedTaskId, setLastSelectedTaskId] = useState<string | null>(null)
 
   // Load tasks from API
   useEffect(() => {
@@ -42,6 +45,11 @@ export default function DailyFlowDashboard() {
       createdAt: Date.now()
     }
     setTasks(prev => [...prev, newTask])
+    // Immediately focus and select the new task
+    setFocusedTaskId(newTask.id)
+    setSelectedTasks(new Set([newTask.id]))
+    setLastSelectedTaskId(newTask.id)
+    
     fetch('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -112,6 +120,157 @@ export default function DailyFlowDashboard() {
     }).catch(e => console.error('Failed to reset dailies', e))
   }
 
+  const addTaskAfterUpdate = (category: TaskCategory) => {
+    addTask(category, "", "")
+  }
+
+  const handleTaskSelect = (taskId: string, multiSelect = false, rangeSelect = false) => {
+    if (rangeSelect && lastSelectedTaskId) {
+      // Handle range selection (Shift+Click) - only within the same column
+      const currentTask = tasks.find(t => t.id === taskId)
+      const lastTask = tasks.find(t => t.id === lastSelectedTaskId)
+      
+      if (currentTask && lastTask && currentTask.category === lastTask.category) {
+        // Only do range selection within the same column
+        const columnTasks = tasks
+          .filter(t => t.category === currentTask.category)
+          .sort((a, b) => {
+            const priorityOrder = { high: 0, medium: 1, low: 2 }
+            if (a.completed !== b.completed) return a.completed ? 1 : -1
+            return priorityOrder[a.priority] - priorityOrder[b.priority]
+          })
+        
+        const currentIndex = columnTasks.findIndex(t => t.id === taskId)
+        const lastIndex = columnTasks.findIndex(t => t.id === lastSelectedTaskId)
+        const start = Math.min(currentIndex, lastIndex)
+        const end = Math.max(currentIndex, lastIndex)
+        
+        const rangeIds = new Set(columnTasks.slice(start, end + 1).map(t => t.id))
+        setSelectedTasks(rangeIds)
+      } else {
+        // Different columns, treat as single selection
+        setSelectedTasks(new Set([taskId]))
+      }
+    } else if (multiSelect) {
+      // Handle multi-selection (Ctrl+Click)
+      setSelectedTasks(prev => {
+        const newSet = new Set(prev)
+        if (newSet.has(taskId)) {
+          newSet.delete(taskId)
+        } else {
+          newSet.add(taskId)
+        }
+        return newSet
+      })
+    } else {
+      // Handle single selection
+      setSelectedTasks(new Set([taskId]))
+    }
+    setLastSelectedTaskId(taskId)
+  }
+
+  const handleTaskFocus = (taskId: string) => {
+    setFocusedTaskId(taskId)
+    // Also select the focused task so it can be operated on
+    setSelectedTasks(prev => {
+      if (!prev.has(taskId)) {
+        return new Set([taskId])
+      }
+      return prev
+    })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Delete' && selectedTasks.size > 0) {
+      // Delete all selected tasks
+      selectedTasks.forEach(taskId => {
+        deleteTask(taskId)
+      })
+      setSelectedTasks(new Set())
+      setFocusedTaskId(null)
+    } else if (e.key === 'Escape') {
+      // Clear selection with Escape key
+      setSelectedTasks(new Set())
+      setFocusedTaskId(null)
+    } else if (e.key === 'Tab') {
+      e.preventDefault()
+      // Handle Tab navigation through columns sequentially
+      const categories: TaskCategory[] = ['today', 'tomorrow', 'week', 'dailies']
+      const currentColumnTasks = filteredTasks.filter(t => t.category === categories[0])
+      const allColumnTasks = categories.map(cat => 
+        filteredTasks.filter(t => t.category === cat).sort((a, b) => {
+          const priorityOrder = { high: 0, medium: 1, low: 2 }
+          if (a.completed !== b.completed) return a.completed ? 1 : -1
+          return priorityOrder[a.priority] - priorityOrder[b.priority]
+        })
+      )
+      
+      if (!focusedTaskId && allColumnTasks[0].length > 0) {
+        // Focus first task in first column if no task is focused
+        const firstTask = allColumnTasks[0][0]
+        handleTaskFocus(firstTask.id)
+      } else if (focusedTaskId) {
+        // Find current task and navigate
+        let found = false
+        let nextTask: Task | null = null
+        
+        for (let colIndex = 0; colIndex < allColumnTasks.length; colIndex++) {
+          const columnTasks = allColumnTasks[colIndex]
+          const taskIndex = columnTasks.findIndex(t => t.id === focusedTaskId)
+          
+          if (taskIndex !== -1) {
+            found = true
+            const nextIndex = e.shiftKey 
+              ? taskIndex - 1  // Go to previous task
+              : taskIndex + 1  // Go to next task
+            
+            if (nextIndex >= 0 && nextIndex < columnTasks.length) {
+              // Next task is in same column
+              nextTask = columnTasks[nextIndex]
+            } else if (e.shiftKey && colIndex > 0) {
+              // Go to last task of previous column
+              const prevColumn = allColumnTasks[colIndex - 1]
+              if (prevColumn.length > 0) {
+                nextTask = prevColumn[prevColumn.length - 1]
+              }
+            } else if (!e.shiftKey && colIndex < allColumnTasks.length - 1) {
+              // Go to first task of next column
+              const nextColumn = allColumnTasks[colIndex + 1]
+              if (nextColumn.length > 0) {
+                nextTask = nextColumn[0]
+              }
+            }
+            break
+          }
+        }
+        
+        if (nextTask) {
+          handleTaskFocus(nextTask.id)
+        }
+      }
+    }
+  }
+
+  const handleBackgroundClick = (e: React.MouseEvent) => {
+    // Clear selection when clicking on empty background
+    const target = e.target as HTMLElement
+    // Check if click is on main content area or empty space (not on tasks, buttons, or interactive elements)
+    if (target === e.currentTarget || target.closest('main') && !target.closest('.task-item') && !target.closest('button') && !target.closest('input')) {
+      setSelectedTasks(new Set())
+      setFocusedTaskId(null)
+    }
+  }
+
+  // Auto-focus new empty tasks
+  useEffect(() => {
+    const newEmptyTasks = tasks.filter(task => !task.title.trim())
+    if (newEmptyTasks.length > 0) {
+      // Find the first new empty task and trigger edit mode
+      const newestTask = newEmptyTasks.sort((a, b) => b.createdAt - a.createdAt)[0]
+      // This will be handled by the TaskItem component's useEffect
+    }
+  }, [tasks])
+
   const aiBreakdown = async () => {
     setIsAiBreaking(true)
     try {
@@ -169,7 +328,7 @@ export default function DailyFlowDashboard() {
   if (!isMounted) return null
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col" onKeyDown={handleKeyDown}>
       {/* Header */}
       <header className="sticky top-0 z-30 w-full bg-white/80 backdrop-blur-md border-b border-border px-6 py-4">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
@@ -224,7 +383,7 @@ export default function DailyFlowDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-8 overflow-x-auto">
+      <main className="flex-1 p-6 md:p-8 overflow-x-auto" onClick={handleBackgroundClick}>
         <div className="max-w-[1600px] mx-auto h-full min-h-[600px] flex gap-6 overflow-x-auto pb-4">
           <TaskColumn 
             title="Today" 
@@ -238,6 +397,11 @@ export default function DailyFlowDashboard() {
             onUpdateTitle={updateTitle}
             onDragStart={handleDragStart}
             onDrop={handleDrop}
+            onAddTaskAfterUpdate={addTaskAfterUpdate}
+            selectedTasks={selectedTasks}
+            focusedTaskId={focusedTaskId}
+            onTaskSelect={handleTaskSelect}
+            onTaskFocus={handleTaskFocus}
           />
           <TaskColumn 
             title="Tomorrow" 
@@ -251,6 +415,11 @@ export default function DailyFlowDashboard() {
             onUpdateTitle={updateTitle}
             onDragStart={handleDragStart}
             onDrop={handleDrop}
+            onAddTaskAfterUpdate={addTaskAfterUpdate}
+            selectedTasks={selectedTasks}
+            focusedTaskId={focusedTaskId}
+            onTaskSelect={handleTaskSelect}
+            onTaskFocus={handleTaskFocus}
           />
           <TaskColumn 
             title="This Week" 
@@ -264,6 +433,11 @@ export default function DailyFlowDashboard() {
             onUpdateTitle={updateTitle}
             onDragStart={handleDragStart}
             onDrop={handleDrop}
+            onAddTaskAfterUpdate={addTaskAfterUpdate}
+            selectedTasks={selectedTasks}
+            focusedTaskId={focusedTaskId}
+            onTaskSelect={handleTaskSelect}
+            onTaskFocus={handleTaskFocus}
           />
           <div className="flex flex-col gap-6 min-w-[300px] flex-1">
              <div className="flex-1">
@@ -279,6 +453,11 @@ export default function DailyFlowDashboard() {
                 onUpdateTitle={updateTitle}
                 onDragStart={handleDragStart}
                 onDrop={handleDrop}
+                onAddTaskAfterUpdate={addTaskAfterUpdate}
+                selectedTasks={selectedTasks}
+                focusedTaskId={focusedTaskId}
+                onTaskSelect={handleTaskSelect}
+                onTaskFocus={handleTaskFocus}
               />
              </div>
              <Button variant="outline" onClick={resetDailies} className="w-full gap-2 border-dashed border-2 py-6 text-muted-foreground hover:text-primary hover:border-primary">

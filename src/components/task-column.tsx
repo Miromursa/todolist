@@ -20,6 +20,11 @@ interface TaskColumnProps {
   onUpdateTitle: (id: string, title: string) => void
   onDragStart: (id: string) => void
   onDrop: (category: TaskCategory) => void
+  onAddTaskAfterUpdate?: (category: TaskCategory) => void
+  selectedTasks?: Set<string>
+  focusedTaskId?: string | null
+  onTaskSelect?: (id: string, multiSelect?: boolean, rangeSelect?: boolean) => void
+  onTaskFocus?: (id: string) => void
 }
 
 export function TaskColumn({ 
@@ -33,7 +38,12 @@ export function TaskColumn({
   onUpdatePriority,
   onUpdateTitle,
   onDragStart,
-  onDrop
+  onDrop,
+  onAddTaskAfterUpdate,
+  selectedTasks = new Set(),
+  focusedTaskId,
+  onTaskSelect,
+  onTaskFocus
 }: TaskColumnProps) {
   const [isOver, setIsOver] = useState(false)
 
@@ -80,32 +90,74 @@ export function TaskColumn({
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 text-primary hover:bg-primary/10"
-            onClick={() => onAddTask(category)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onAddTask(category)
+            }}
           >
             <Plus size={20} />
           </Button>
         </div>
       </div>
       
-      <ScrollArea className="flex-1 pr-2">
-        <div className="space-y-3 pb-4">
+      <ScrollArea className="flex-1 pr-2 scroll-area">
+        <div className="space-y-3 pb-4 min-h-full">
           {sortedTasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border-2 border-dashed border-border rounded-xl">
-              <p className="text-sm">No tasks yet</p>
-            </div>
+            <>
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border-2 border-dashed border-border rounded-xl">
+                <p className="text-sm">No tasks yet</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                className="w-full mt-2 py-2 text-muted-foreground hover:text-primary border border-dashed border-border hover:border-primary/50 transition-colors"
+                onClick={() => onAddTask(category)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onAddTask(category)
+                  }
+                }}
+              >
+                <Plus size={16} className="mr-2" />
+                Add Task
+              </Button>
+            </>
           ) : (
-            sortedTasks.map(task => (
-              <TaskItem 
-                key={task.id} 
-                task={task} 
-                onToggle={onToggle}
-                onDelete={onDelete}
-                onMove={onMove}
-                onUpdatePriority={onUpdatePriority}
-                onUpdateTitle={onUpdateTitle}
-                onDragStart={onDragStart}
-              />
-            ))
+            <>
+              {sortedTasks.map(task => (
+                <TaskItem 
+                  key={task.id} 
+                  task={task} 
+                  onToggle={onToggle}
+                  onDelete={onDelete}
+                  onMove={onMove}
+                  onUpdatePriority={onUpdatePriority}
+                  onUpdateTitle={onUpdateTitle}
+                  onDragStart={onDragStart}
+                  onAddTaskAfterUpdate={onAddTaskAfterUpdate}
+                  isSelected={selectedTasks.has(task.id)}
+                  isFocused={focusedTaskId === task.id}
+                  onSelect={onTaskSelect}
+                  onFocus={onTaskFocus}
+                />
+              ))}
+              <Button 
+                variant="ghost" 
+                className="w-full mt-2 py-2 text-muted-foreground hover:text-primary border border-dashed border-border hover:border-primary/50 transition-colors"
+                onClick={() => onAddTask(category)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onAddTask(category)
+                  }
+                }}
+              >
+                <Plus size={16} className="mr-2" />
+                Add Task
+              </Button>
+            </>
           )}
         </div>
       </ScrollArea>
