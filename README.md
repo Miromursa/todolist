@@ -55,7 +55,43 @@ cp .env.example .env
 npm run dev
 ```
 
-5. Open [http://localhost:5432](http://localhost:5432) in your browser.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Docker Setup
+
+### Using Docker Compose (Recommended)
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd questlog
+```
+
+2. Run with Docker Compose:
+```bash
+docker-compose up -d
+```
+
+3. Open [http://localhost:5432](http://localhost:5432) in your browser.
+
+### Using Docker Directly
+
+1. Build the Docker image:
+```bash
+docker build -t questlog .
+```
+
+2. Run the container:
+```bash
+docker run -p 5432:5432 -v questlog-data:/app/data questlog
+```
+
+### Docker Features
+
+- **Multi-stage build**: Optimized image size with separate build and runtime stages
+- **Data persistence**: SQLite database stored in mounted volume at `/app/data`
+- **Production ready**: Runs as non-root user with proper security settings
+- **Port 5432**: Container exposes port 5432 (different from local development)
 
 ## Usage
 
@@ -107,9 +143,7 @@ questlog/
 │   │   └── theme-toggle.tsx
 │   ├── hooks/              # Custom React hooks
 │   ├── lib/               # Utility functions
-│   │   ├── db.ts          # Database utilities
-│   │   └── utils.ts       # General utilities
-│   └── types/             # TypeScript type definitions
+│   │   └── db.ts          # Database utilities
 ├── public/                # Static assets
 └── tailwind.config.ts     # Tailwind configuration
 ```
@@ -121,7 +155,7 @@ questlog/
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
-- `npm run test` - Run tests (placeholder)
+- `npm run test` - Tests not yet implemented
 
 ### Database
 
