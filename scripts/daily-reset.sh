@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Daily reset script for Questlog
 # This script calls the daily reset API endpoint

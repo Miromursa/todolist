@@ -12,6 +12,33 @@ services:
       - DB_PATH=/app/data/tasks.db
     restart: unless-stopped
 
+  cron:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "
+      while true; do
+        current_time=$$(date +%H:%M)
+        if [ \"$$current_time\" = \"06:00\" ]; then
+          echo \"[$$(date)] Running daily reset...\"
+          ./scripts/daily-reset.sh http://app:5432/api/reset
+          sleep 60
+        else
+          sleep 30
+        fi
+      done
+      "
+    volumes:
+      - todolist-data:/app/data
+    environment:
+      - NODE_ENV=development
+      - DB_PATH=/app/data/tasks.db
+    depends_on:
+      - app
+    restart: unless-stopped
+    network_mode: service:app
+
 networks:
   default:
     driver: bridge

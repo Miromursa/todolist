@@ -19,7 +19,7 @@ RUN npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat curl
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -42,6 +42,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy the native better-sqlite3 binding for the runner
 COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+
+# Copy reset script
+COPY --from=builder /app/scripts/daily-reset.sh ./scripts/daily-reset.sh
+RUN chmod +x ./scripts/daily-reset.sh
 
 # Create data directory for SQLite persistence
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
