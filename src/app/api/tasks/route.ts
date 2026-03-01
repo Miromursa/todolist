@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAllTasks, insertTask, bulkInsertTasks, resetDailies } from '@/lib/db';
+import { getAllTasks, insertTask, bulkInsertTasks, resetDailies, performDailyReset } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
         category: t.category,
         completed: t.completed ? 1 : 0,
         createdAt: t.createdAt,
+        lastReset: t.lastReset || null,
       }));
       bulkInsertTasks(rows);
       return NextResponse.json({ ok: true });
@@ -37,6 +38,12 @@ export async function POST(request: Request) {
     // Special action: reset dailies
     if (body.action === 'reset-dailies') {
       resetDailies();
+      return NextResponse.json({ ok: true });
+    }
+
+    // Special action: perform daily reset
+    if (body.action === 'daily-reset') {
+      performDailyReset();
       return NextResponse.json({ ok: true });
     }
 
@@ -49,6 +56,7 @@ export async function POST(request: Request) {
       category: body.category,
       completed: body.completed ? 1 : 0,
       createdAt: body.createdAt,
+      lastReset: body.lastReset || null,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

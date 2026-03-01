@@ -30,7 +30,7 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copy public assets if they exist
 RUN mkdir -p ./public
-COPY --from=builder /app/src/app/favicon.ico ./public/favicon.ico
+COPY --from=builder /app/public ./public
 
 # Set the correct permission for prerender cache
 RUN mkdir .next

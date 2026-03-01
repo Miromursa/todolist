@@ -16,6 +16,14 @@ function getDb(): Database.Database {
 
     db = new Database(DB_PATH);
     db.pragma('journal_mode = WAL');
+    
+    // Add lastReset column if it doesn't exist (for existing databases)
+    try {
+      db.prepare("ALTER TABLE tasks ADD COLUMN lastReset INTEGER DEFAULT NULL").run();
+    } catch (error) {
+      // Column already exists, ignore error
+    }
+    
     db.exec(`
       CREATE TABLE IF NOT EXISTS tasks (
         id TEXT PRIMARY KEY,
@@ -24,7 +32,8 @@ function getDb(): Database.Database {
         priority TEXT NOT NULL DEFAULT 'B',
         category TEXT NOT NULL,
         completed INTEGER NOT NULL DEFAULT 0,
-        createdAt INTEGER NOT NULL
+        createdAt INTEGER NOT NULL,
+        lastReset INTEGER DEFAULT NULL
       )
     `);
   }
@@ -39,6 +48,7 @@ export interface TaskRow {
   category: string;
   completed: number;
   createdAt: number;
+  lastReset: number | null;
 }
 
 export function getAllTasks(): TaskRow[] {
@@ -47,8 +57,8 @@ export function getAllTasks(): TaskRow[] {
 
 export function insertTask(task: TaskRow): void {
   getDb().prepare(
-    'INSERT INTO tasks (id, title, description, priority, category, completed, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(task.id, task.title, task.description, task.priority, task.category, task.completed, task.createdAt);
+    'INSERT INTO tasks (id, title, description, priority, category, completed, createdAt, lastReset) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(task.id, task.title, task.description, task.priority, task.category, task.completed, task.createdAt, task.lastReset);
 }
 
 export function updateTask(id: string, fields: Partial<Omit<TaskRow, 'id'>>): void {
@@ -69,11 +79,11 @@ export function deleteTask(id: string): void {
 
 export function bulkInsertTasks(tasks: TaskRow[]): void {
   const insert = getDb().prepare(
-    'INSERT INTO tasks (id, title, description, priority, category, completed, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO tasks (id, title, description, priority, category, completed, createdAt, lastReset) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   );
   const transaction = getDb().transaction((items: TaskRow[]) => {
     for (const t of items) {
-      insert.run(t.id, t.title, t.description, t.priority, t.category, t.completed, t.createdAt);
+      insert.run(t.id, t.title, t.description, t.priority, t.category, t.completed, t.createdAt, t.lastReset);
     }
   });
   transaction(tasks);
@@ -81,4 +91,18 @@ export function bulkInsertTasks(tasks: TaskRow[]): void {
 
 export function resetDailies(): void {
   getDb().prepare("UPDATE tasks SET completed = 0 WHERE category = 'dailies'").run();
+}
+
+export function performDailyReset(): void {
+  const now = Date.now();
+  const db = getDb();
+  
+  // Move tomorrow tasks to today
+  db.prepare("UPDATE tasks SET category = 'today', lastReset = ? WHERE category = 'tomorrow'").run(now);
+  
+  // Move all today tasks to week (not just old ones)
+  db.prepare("UPDATE tasks SET category = 'week' WHERE category = 'today'").run();
+  
+  // Reset dailies
+  db.prepare("UPDATE tasks SET completed = 0 WHERE category = 'dailies'").run();
 }
