@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Task, TaskCategory, TaskPriority } from "@/types/task"
 import { TaskColumn } from "@/components/task-column"
+import { StreakCounter } from "@/components/streak-counter"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { 
@@ -22,6 +23,7 @@ export default function QuestlogDashboard() {
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null)
   const [lastSelectedTaskId, setLastSelectedTaskId] = useState<string | null>(null)
+  const [streakRefresh, setStreakRefresh] = useState(0)
 
   // Load tasks from API
   useEffect(() => {
@@ -62,6 +64,18 @@ export default function QuestlogDashboard() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completed: task ? !task.completed : true }),
+    }).then(() => {
+      // Update streak if this was a daily task
+      if (task?.category === 'dailies') {
+        fetch('/api/streak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update' }),
+        }).then(() => {
+          // Refresh streak counter
+          setStreakRefresh(prev => prev + 1)
+        }).catch(e => console.error('Failed to update streak', e))
+      }
     }).catch(e => console.error('Failed to toggle task', e))
   }
 
@@ -293,6 +307,16 @@ export default function QuestlogDashboard() {
               <h1 className="text-xl font-bold tracking-tight text-primary">Questlog</h1>
               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Adventure Tracker</p>
             </div>
+            <div className="hidden md:flex items-center gap-3 ml-6 text-[10px] text-muted-foreground">
+              <span className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 px-1.5 py-0.5 rounded font-medium">A</span>
+              <span>Urgent</span>
+              <span className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 px-1.5 py-0.5 rounded font-medium">B</span>
+              <span>Important</span>
+              <span className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">C</span>
+              <span>Projects</span>
+              <span className="bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300 px-1.5 py-0.5 rounded font-medium">D</span>
+              <span>Ideas</span>
+            </div>
           </div>
 
           <div className="flex-1 max-w-md hidden md:block">
@@ -318,11 +342,8 @@ export default function QuestlogDashboard() {
                 <TrendingUp size={16} />
                 <span>{Math.round((stats.completed / (stats.total || 1)) * 100)}%</span>
               </div>
+              <StreakCounter key={streakRefresh} compact={true} />
             </div>
-            <Button onClick={() => addTask('today')} className="gap-2 shadow-lg shadow-primary/20">
-              <Plus size={18} />
-              New Task
-            </Button>
           </div>
         </div>
       </header>

@@ -48,7 +48,7 @@ export function TaskColumn({
   const [isOver, setIsOver] = useState(false)
 
   const sortedTasks = [...tasks].sort((a, b) => {
-    const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+    const priorityOrder: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
   })

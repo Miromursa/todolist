@@ -24,6 +24,24 @@ function getDb(): Database.Database {
       // Column already exists, ignore error
     }
     
+    // Create streak counter table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS streak_counter (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        current_streak INTEGER NOT NULL DEFAULT 0,
+        longest_streak INTEGER NOT NULL DEFAULT 0,
+        last_completed_date INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+      )
+    `);
+    
+    // Initialize streak counter if it doesn't exist
+    try {
+      db.prepare("INSERT INTO streak_counter (id, current_streak, longest_streak, last_completed_date, created_at) VALUES (1, 0, 0, 0, strftime('%s', 'now'))").run();
+    } catch (error) {
+      // Row already exists, ignore error
+    }
+    
     db.exec(`
       CREATE TABLE IF NOT EXISTS tasks (
         id TEXT PRIMARY KEY,
@@ -49,6 +67,14 @@ export interface TaskRow {
   completed: number;
   createdAt: number;
   lastReset: number | null;
+}
+
+export interface StreakRow {
+  id: number;
+  current_streak: number;
+  longest_streak: number;
+  last_completed_date: number;
+  created_at: number;
 }
 
 export function getAllTasks(): TaskRow[] {
@@ -105,4 +131,44 @@ export function performDailyReset(): void {
   
   // Reset dailies
   db.prepare("UPDATE tasks SET completed = 0 WHERE category = 'dailies'").run();
+}
+
+export function getStreak(): StreakRow {
+  return getDb().prepare('SELECT * FROM streak_counter WHERE id = 1').get() as StreakRow;
+}
+
+export function updateStreak(): void {
+  const db = getDb();
+  const now = Date.now();
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const todayTimestamp = today.getTime();
+  
+  const currentStreak = getStreak();
+  const lastCompletedDate = currentStreak.last_completed_date;
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayTimestamp = yesterday.getTime();
+  
+  // Check if all dailies are completed
+  const allDailiesCompleted = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE category = 'dailies' AND completed = 0").get() as { count: number };
+  const totalDailies = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE category = 'dailies'").get() as { count: number };
+  
+  if (allDailiesCompleted.count === 0 && totalDailies.count > 0) {
+    // All dailies completed
+    if (lastCompletedDate === yesterdayTimestamp) {
+      // Continue streak
+      db.prepare("UPDATE streak_counter SET current_streak = current_streak + 1, longest_streak = MAX(longest_streak, current_streak + 1), last_completed_date = ? WHERE id = 1").run(todayTimestamp);
+    } else if (lastCompletedDate < todayTimestamp) {
+      // Start new streak
+      db.prepare("UPDATE streak_counter SET current_streak = 1, longest_streak = MAX(longest_streak, 1), last_completed_date = ? WHERE id = 1").run(todayTimestamp);
+    }
+  } else if (lastCompletedDate < todayTimestamp && lastCompletedDate !== yesterdayTimestamp) {
+    // Streak broken (didn't complete yesterday and not already updated today)
+    db.prepare("UPDATE streak_counter SET current_streak = 0 WHERE id = 1").run();
+  }
+}
+
+export function resetStreak(): void {
+  getDb().prepare("UPDATE streak_counter SET current_streak = 0, last_completed_date = 0 WHERE id = 1").run();
 }
