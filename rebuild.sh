@@ -1,5 +1,10 @@
 #!/bin/bash
 
+echo "Fetching latest changes from git..."
+git fetch origin
+
+git pull origin master
+
 echo "Rebuilding questlog containers..."
 docker compose down
 docker compose build --no-cache
