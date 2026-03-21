@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { useScreenOrientation } from "@/hooks/use-screen-orientation"
 
 export default function QuestlogDashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -23,6 +24,7 @@ export default function QuestlogDashboard() {
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null)
   const [lastSelectedTaskId, setLastSelectedTaskId] = useState<string | null>(null)
   const [streakRefresh, setStreakRefresh] = useState(0)
+  const { isVerticalMonitor } = useScreenOrientation()
 
   // Load tasks from API
   useEffect(() => {
@@ -348,7 +350,7 @@ export default function QuestlogDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 p-4 sm:p-6 md:p-8" onClick={handleBackgroundClick}>
-        <div className="max-w-[1600px] mx-auto h-full min-h-[600px] flex flex-col lg:flex-row gap-4 sm:gap-6 pb-4">
+        <div className={`max-w-[1600px] mx-auto h-full min-h-[600px] flex flex-col gap-4 sm:gap-6 pb-4 ${!isVerticalMonitor ? 'lg:flex-row' : ''}`}>
           <TaskColumn 
             title="Today" 
             category="today"
