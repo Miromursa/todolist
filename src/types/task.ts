@@ -1,6 +1,6 @@
 export type TaskPriority = 'A' | 'B' | 'C' | 'D';
 
-export type TaskCategory = 'today' | 'tomorrow' | 'week' | 'dailies';
+export type TaskCategory = 'today' | 'tomorrow' | 'week' | 'dailies' | 'done' | 'backlog';
 
 export interface Task {
   id: string;

@@ -11,6 +11,9 @@ import {
   Search, 
   CheckCircle2,
   TrendingUp,
+  Eye,
+  EyeOff,
+  Archive,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useScreenOrientation } from "@/hooks/use-screen-orientation"
@@ -24,6 +27,8 @@ export default function QuestlogDashboard() {
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null)
   const [lastSelectedTaskId, setLastSelectedTaskId] = useState<string | null>(null)
   const [streakRefresh, setStreakRefresh] = useState(0)
+  const [showDoneColumn, setShowDoneColumn] = useState(false)
+  const [showBacklogColumn, setShowBacklogColumn] = useState(false)
   const { isVerticalMonitor } = useScreenOrientation()
 
   // Load tasks from API
@@ -60,11 +65,25 @@ export default function QuestlogDashboard() {
 
   const toggleTask = (id: string) => {
     const task = tasks.find(t => t.id === id)
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t))
+    const newCompletedState = task ? !task.completed : true
+    
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: newCompletedState } : t))
+    
+    // If task is being completed, move it to done category after 5 seconds
+    if (newCompletedState && task && task.category !== 'done') {
+      setTimeout(() => {
+        moveTask(id, 'done')
+      }, 5000)
+    }
+    // If task is being uncompleted, move it back to today immediately
+    if (!newCompletedState && task && task.category === 'done') {
+      moveTask(id, 'today')
+    }
+    
     fetch(`/api/tasks/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed: task ? !task.completed : true }),
+      body: JSON.stringify({ completed: newCompletedState }),
     }).then(() => {
       // Update streak if this was a daily task
       if (task?.category === 'dailies') {
@@ -208,7 +227,7 @@ export default function QuestlogDashboard() {
     } else if (e.key === 'Tab') {
       e.preventDefault()
       // Handle Tab navigation through columns sequentially
-      const categories: TaskCategory[] = ['today', 'tomorrow', 'week', 'dailies']
+      const categories: TaskCategory[] = ['today', 'tomorrow', 'week', 'dailies', 'done', 'backlog']
       const currentColumnTasks = filteredTasks.filter(t => t.category === categories[0])
       const allColumnTasks = categories.map(cat => 
         filteredTasks.filter(t => t.category === cat).sort((a, b) => {
@@ -344,6 +363,26 @@ export default function QuestlogDashboard() {
               </div>
               <StreakCounter key={streakRefresh} compact={true} />
             </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showDoneColumn ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowDoneColumn(!showDoneColumn)}
+                className="gap-2 text-xs"
+              >
+                {showDoneColumn ? <EyeOff size={14} /> : <Eye size={14} />}
+                Done
+              </Button>
+              <Button
+                variant={showBacklogColumn ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowBacklogColumn(!showBacklogColumn)}
+                className="gap-2 text-xs"
+              >
+                {showBacklogColumn ? <EyeOff size={14} /> : <Archive size={14} />}
+                Backlog
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -387,24 +426,70 @@ export default function QuestlogDashboard() {
             onTaskSelect={handleTaskSelect}
             onTaskFocus={handleTaskFocus}
           />
-          <TaskColumn 
-            title="This Week" 
-            category="week"
-            tasks={filteredTasks.filter(t => t.category === 'week')}
-            onAddTask={addTask}
-            onToggle={toggleTask}
-            onDelete={deleteTask}
-            onMove={moveTask}
-            onUpdatePriority={updatePriority}
-            onUpdateTitle={updateTitle}
-            onDragStart={handleDragStart}
-            onDrop={handleDrop}
-            onAddTaskAfterUpdate={addTaskAfterUpdate}
-            selectedTasks={selectedTasks}
-            focusedTaskId={focusedTaskId}
-            onTaskSelect={handleTaskSelect}
-            onTaskFocus={handleTaskFocus}
-          />
+          <div className="flex flex-col gap-4 sm:gap-6 min-w-[280px] sm:min-w-[300px] flex-1">
+            <TaskColumn 
+              title="This Week" 
+              category="week"
+              tasks={filteredTasks.filter(t => t.category === 'week')}
+              onAddTask={addTask}
+              onToggle={toggleTask}
+              onDelete={deleteTask}
+              onMove={moveTask}
+              onUpdatePriority={updatePriority}
+              onUpdateTitle={updateTitle}
+              onDragStart={handleDragStart}
+              onDrop={handleDrop}
+              onAddTaskAfterUpdate={addTaskAfterUpdate}
+              selectedTasks={selectedTasks}
+              focusedTaskId={focusedTaskId}
+              onTaskSelect={handleTaskSelect}
+              onTaskFocus={handleTaskFocus}
+            />
+          </div>
+          {showDoneColumn && (
+            <div className="flex flex-col gap-4 sm:gap-6 min-w-[280px] sm:min-w-[300px] flex-1">
+              <TaskColumn 
+                title="Done" 
+                category="done"
+                tasks={filteredTasks.filter(t => t.category === 'done')}
+                onAddTask={addTask}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                onMove={moveTask}
+                onUpdatePriority={updatePriority}
+                onUpdateTitle={updateTitle}
+                onDragStart={handleDragStart}
+                onDrop={handleDrop}
+                onAddTaskAfterUpdate={addTaskAfterUpdate}
+                selectedTasks={selectedTasks}
+                focusedTaskId={focusedTaskId}
+                onTaskSelect={handleTaskSelect}
+                onTaskFocus={handleTaskFocus}
+              />
+            </div>
+          )}
+          {showBacklogColumn && (
+            <div className="flex flex-col gap-4 sm:gap-6 min-w-[280px] sm:min-w-[300px] flex-1">
+              <TaskColumn 
+                title="Backlog" 
+                category="backlog"
+                tasks={filteredTasks.filter(t => t.category === 'backlog')}
+                onAddTask={addTask}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                onMove={moveTask}
+                onUpdatePriority={updatePriority}
+                onUpdateTitle={updateTitle}
+                onDragStart={handleDragStart}
+                onDrop={handleDrop}
+                onAddTaskAfterUpdate={addTaskAfterUpdate}
+                selectedTasks={selectedTasks}
+                focusedTaskId={focusedTaskId}
+                onTaskSelect={handleTaskSelect}
+                onTaskFocus={handleTaskFocus}
+              />
+            </div>
+          )}
           <div className="flex flex-col gap-4 sm:gap-6 min-w-[280px] sm:min-w-[300px] flex-1">
              <div className="flex-1">
               <TaskColumn 

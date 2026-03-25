@@ -61,6 +61,7 @@ export function TaskItem({
 }: TaskItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(task.title)
+  const [isDisappearing, setIsDisappearing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -85,6 +86,21 @@ export function TaskItem({
       setIsEditing(true)
     }
   }, [isFocused, isEditing, task.completed])
+
+  useEffect(() => {
+    // Trigger disappear animation when task is completed and not in done column
+    // Start animation only after 5 seconds
+    if (task.completed && task.category !== 'done' && !isDisappearing) {
+      const timer = setTimeout(() => {
+        setIsDisappearing(true)
+      }, 4500) // Start disappearing animation at 4.5 seconds (gives 500ms for fade-out)
+      
+      return () => clearTimeout(timer)
+    } else if (!task.completed || task.category === 'done') {
+      // Reset disappearing state if task is uncompleted or already in done column
+      setIsDisappearing(false)
+    }
+  }, [task.completed, task.category, isDisappearing])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -177,10 +193,11 @@ export function TaskItem({
       onKeyDown={handleKeyDown}
       tabIndex={0}
       className={cn(
-        "group relative flex items-center gap-3 bg-transparent p-3 border border-border task-item",
+        "group relative flex items-center gap-3 bg-transparent p-3 border border-border task-item transition-all duration-500",
         task.completed && "opacity-60 grayscale-[0.5]",
         isSelected && "border-primary bg-primary/10",
-        isFocused && "border-primary bg-primary/10"
+        isFocused && "border-primary bg-primary/10",
+        isDisappearing && "opacity-0 transform scale-95 -translate-y-1"
       )}
     >
       <div className="flex items-center cursor-grab active:cursor-grabbing text-muted-foreground group-hover:text-primary transition-colors"
@@ -250,7 +267,7 @@ export function TaskItem({
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-secondary/50">
               <MoreVertical size={16} />
             </Button>
           </DropdownMenuTrigger>
@@ -279,6 +296,12 @@ export function TaskItem({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onMove(task.id, 'dailies')}>
               Make Recurring (Dailies)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onMove(task.id, 'done')}>
+              Move to Done
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onMove(task.id, 'backlog')}>
+              Move to Backlog
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onDelete(task.id)} className="text-destructive">
