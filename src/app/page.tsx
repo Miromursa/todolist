@@ -69,8 +69,8 @@ export default function QuestlogDashboard() {
     
     setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: newCompletedState } : t))
     
-    // If task is being completed, move it to done category after 5 seconds
-    if (newCompletedState && task && task.category !== 'done') {
+    // If task is being completed, move it to done category after 5 seconds (but not for dailies)
+    if (newCompletedState && task && task.category !== 'done' && task.category !== 'dailies') {
       setTimeout(() => {
         moveTask(id, 'done')
       }, 5000)
@@ -426,26 +426,24 @@ export default function QuestlogDashboard() {
             onTaskSelect={handleTaskSelect}
             onTaskFocus={handleTaskFocus}
           />
-          <div className="flex flex-col gap-4 sm:gap-6 min-w-[280px] sm:min-w-[300px] flex-1">
-            <TaskColumn 
-              title="This Week" 
-              category="week"
-              tasks={filteredTasks.filter(t => t.category === 'week')}
-              onAddTask={addTask}
-              onToggle={toggleTask}
-              onDelete={deleteTask}
-              onMove={moveTask}
-              onUpdatePriority={updatePriority}
-              onUpdateTitle={updateTitle}
-              onDragStart={handleDragStart}
-              onDrop={handleDrop}
-              onAddTaskAfterUpdate={addTaskAfterUpdate}
-              selectedTasks={selectedTasks}
-              focusedTaskId={focusedTaskId}
-              onTaskSelect={handleTaskSelect}
-              onTaskFocus={handleTaskFocus}
-            />
-          </div>
+          <TaskColumn 
+            title="This Week" 
+            category="week"
+            tasks={filteredTasks.filter(t => t.category === 'week')}
+            onAddTask={addTask}
+            onToggle={toggleTask}
+            onDelete={deleteTask}
+            onMove={moveTask}
+            onUpdatePriority={updatePriority}
+            onUpdateTitle={updateTitle}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+            onAddTaskAfterUpdate={addTaskAfterUpdate}
+            selectedTasks={selectedTasks}
+            focusedTaskId={focusedTaskId}
+            onTaskSelect={handleTaskSelect}
+            onTaskFocus={handleTaskFocus}
+          />
           {showDoneColumn && (
             <div className="flex flex-col gap-4 sm:gap-6 min-w-[280px] sm:min-w-[300px] flex-1">
               <TaskColumn 
@@ -469,26 +467,24 @@ export default function QuestlogDashboard() {
             </div>
           )}
           {showBacklogColumn && (
-            <div className="flex flex-col gap-4 sm:gap-6 min-w-[280px] sm:min-w-[300px] flex-1">
-              <TaskColumn 
-                title="Backlog" 
-                category="backlog"
-                tasks={filteredTasks.filter(t => t.category === 'backlog')}
-                onAddTask={addTask}
-                onToggle={toggleTask}
-                onDelete={deleteTask}
-                onMove={moveTask}
-                onUpdatePriority={updatePriority}
-                onUpdateTitle={updateTitle}
-                onDragStart={handleDragStart}
-                onDrop={handleDrop}
-                onAddTaskAfterUpdate={addTaskAfterUpdate}
-                selectedTasks={selectedTasks}
-                focusedTaskId={focusedTaskId}
-                onTaskSelect={handleTaskSelect}
-                onTaskFocus={handleTaskFocus}
-              />
-            </div>
+            <TaskColumn 
+              title="Backlog" 
+              category="backlog"
+              tasks={filteredTasks.filter(t => t.category === 'backlog')}
+              onAddTask={addTask}
+              onToggle={toggleTask}
+              onDelete={deleteTask}
+              onMove={moveTask}
+              onUpdatePriority={updatePriority}
+              onUpdateTitle={updateTitle}
+              onDragStart={handleDragStart}
+              onDrop={handleDrop}
+              onAddTaskAfterUpdate={addTaskAfterUpdate}
+              selectedTasks={selectedTasks}
+              focusedTaskId={focusedTaskId}
+              onTaskSelect={handleTaskSelect}
+              onTaskFocus={handleTaskFocus}
+            />
           )}
           <div className="flex flex-col gap-4 sm:gap-6 min-w-[280px] sm:min-w-[300px] flex-1">
              <div className="flex-1">

@@ -48,6 +48,12 @@ export function TaskColumn({
   const [isOver, setIsOver] = useState(false)
 
   const sortedTasks = [...tasks].sort((a, b) => {
+    // For dailies, don't sort by priority - maintain manual order
+    if (category === 'dailies') {
+      return 0; // Keep original order for drag and drop
+    }
+    
+    // For other columns, sort by priority
     const priorityOrder: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);

@@ -88,16 +88,16 @@ export function TaskItem({
   }, [isFocused, isEditing, task.completed])
 
   useEffect(() => {
-    // Trigger disappear animation when task is completed and not in done column
+    // Trigger disappear animation when task is completed and not in done column or dailies
     // Start animation only after 5 seconds
-    if (task.completed && task.category !== 'done' && !isDisappearing) {
+    if (task.completed && task.category !== 'done' && task.category !== 'dailies' && !isDisappearing) {
       const timer = setTimeout(() => {
         setIsDisappearing(true)
       }, 4500) // Start disappearing animation at 4.5 seconds (gives 500ms for fade-out)
       
       return () => clearTimeout(timer)
-    } else if (!task.completed || task.category === 'done') {
-      // Reset disappearing state if task is uncompleted or already in done column
+    } else if (!task.completed || task.category === 'done' || task.category === 'dailies') {
+      // Reset disappearing state if task is uncompleted or already in done column or is a daily
       setIsDisappearing(false)
     }
   }, [task.completed, task.category, isDisappearing])
@@ -253,17 +253,19 @@ export function TaskItem({
       </div>
 
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Badge 
-          onClick={cyclePriority}
-          variant="outline" 
-          title={priorityDescriptions[task.priority]}
-          className={cn(
-            "text-[10px] uppercase font-bold px-1.5 py-0 cursor-pointer transition-colors border-2", 
-            priorityColors[task.priority]
-          )}
-        >
-          [{task.priority}]
-        </Badge>
+        {task.category !== 'dailies' && (
+          <Badge 
+            onClick={cyclePriority}
+            variant="outline" 
+            title={priorityDescriptions[task.priority]}
+            className={cn(
+              "text-[10px] uppercase font-bold px-1.5 py-0 cursor-pointer transition-colors border-2", 
+              priorityColors[task.priority]
+            )}
+          >
+            [{task.priority}]
+          </Badge>
+        )}
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -272,19 +274,23 @@ export function TaskItem({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'A')}>
-              Priority: A
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'B')}>
-              Priority: B
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'C')}>
-              Priority: C
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'D')}>
-              Priority: D
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            {task.category !== 'dailies' && (
+              <>
+                <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'A')}>
+                  Priority: A
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'B')}>
+                  Priority: B
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'C')}>
+                  Priority: C
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onUpdatePriority(task.id, 'D')}>
+                  Priority: D
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onClick={() => onMove(task.id, 'today')}>
               Move to Today
             </DropdownMenuItem>
